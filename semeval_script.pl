@@ -72,18 +72,15 @@ while(my $row = <$fh>)
 {
 	my @temparray = split('\t',$row);
 
-	# Not all data in this hash is being used but created for later implementation. 
 	$OverallHash{$num}{ID} = $temparray[0];
-	$OverallHash{$num}{Warrant0} = text_sanitation($temparray[1]);#$p->get_readable($p->add_tags($temparray[1]));
+	$OverallHash{$num}{Warrant0} = text_sanitation($temparray[1]);
 	$OverallHash{$num}{Warrant0_Sentiment} = 0;
 	$OverallHash{$num}{Warrant1_Sentiment} = 0;
-	$OverallHash{$num}{Warrant1} = text_sanitation($temparray[2]);#$p->get_readable($p->add_tags($temparray[2]));
+	$OverallHash{$num}{Warrant1} = text_sanitation($temparray[2]);
 	$OverallHash{$num}{CorrectLabel} = $temparray[3];
-	#$OverallHash{$num}{Reason_tagged} = $p->get_readable($p->add_tags($temparray[4]));
-	$OverallHash{$num}{Reason_Claim_Combined} = text_sanitation(join " ", $temparray[4], $temparray[5]);
+	$OverallHash{$num}{Reason_Claim_Combined} = text_sanitation(join ",..., ", $temparray[4], $temparray[5]);
 	$OverallHash{$num}{Claim} = text_sanitation($temparray[4]);
 	$OverallHash{$num}{Reason} = text_sanitation($temparray[5]);
-	#$OverallHash{$num}{Claim_tagged} = $p->get_readable($p->add_tags($temparray[5]));
 	$OverallHash{$num}{Debate_Title} = $temparray[6];
 	$OverallHash{$num}{Debate_Info} = $temparray[7];
 	$OverallHash{$num}{Answer} = -1;
@@ -134,8 +131,8 @@ while(my $row = <$fh>)
 #Algorithm steps steps 3, 4, 5, 6
 reason_claim_sentiment_value(); #3
 warrant_sentiment_set(); #4
-COMAPRISION_SHOWDOWN(); #5
-accuracy(); #6
+#COMAPRISION_SHOWDOWN(); #5
+#accuracy(); #6
 
 print_hash(); #-- Can be used to print out OverallHash
 
@@ -164,12 +161,31 @@ sub reason_claim_sentiment_value{
 		foreach my $k2 (keys %SentimentHash) 
 		{
 			my $w = $SentimentHash{$k2}{word}; #assign word from sentiment to variable
-			if($OverallHash{$k}{Reason_Claim_Combined} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+
+			#Tag Reason
+			if($OverallHash{$k}{Reason} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{
 				my $score = $SentimentHash{$k2}{score};
-				$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b$w\b/$w\_$score/g;
-				$OverallHash{$k}{sentiment_value} += $score;
+				$OverallHash{$k}{Reason} =~ s/\b$w\b/$w\_$score/g;
+				
 			}
+
+			#Tag Claim
+			if($OverallHash{$k}{Claim} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			{
+				my $score = $SentimentHash{$k2}{score};
+				$OverallHash{$k}{Claim} =~ s/\b$w\b/$w\_$score/g;
+			}
+
+
+			#if($OverallHash{$k}{Reason_Claim_Combined} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			#{
+			#	my $score = $SentimentHash{$k2}{score};
+			#	$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b$w\b/$w\_$score/g;
+			#	$OverallHash{$k}{sentiment_value} += $score;
+			#}
+
+			#$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
 		}
 
 		my @matches = $OverallHash{$k}{Reason_Claim_Combined} =~ /\b(not|yet|cannot)\b/g;
