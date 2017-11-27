@@ -1,0 +1,59 @@
+ID: 15344547_631_A1LZPWVZRTUZD0 
+ Debate Title: Should Happy Hour Be Banned?
+Debate Info: Some states ban happy hour deals for promoting excessive drinking and drunken driving. Should more do so?
+ Claim : most people are not irresponsible
+ Reason: happy hour should not be banned
+ Claim + Reason: most people are not irresponsible happy hour should not be banned
+ Warrant 0: the small group of people who usually attend happy hour are very responsible
+ Warrant 1: the small group of people who usually attend happy hour are disproportionately irresponsible
+CorrectLabel: 0
+Answer: 1
+Claim + Reason Sentiment: -0.478
+Warrant0 Value: 2.568
+Warrant1 Value: 1.505
+
+------------------------
+ID: 16987662_192_A1CF6U3GF7DZEJ 
+ Debate Title: Is It Fair to Rate Professors Online?
+Debate Info: As students finish their finals and plan for next semester, should they turn to RateMyProfessor.com to offer advice and seek guidance?
+ Claim : one students online ratings do not represent an entire class
+ Reason: it is not fair to rate professors online
+ Claim + Reason: one students online ratings do not represent an entire class it is not fair to rate professors online
+ Warrant 0: not all professors know how to work the crowd
+ Warrant 1: the smart professors know how to work the crowd
+CorrectLabel: 0
+Answer: 1
+Claim + Reason Sentiment: 0.764
+Warrant0 Value: -0.278
+Warrant1 Value: 0.758
+------------------------
+ID: 14085524_189_A34QZDSTKZ3JO9 
+ Debate Title: Are Economists Overrated?
+Debate Info: Do economists have too much authority, given their mixed record at forecasting and planning?
+ Claim : economics is not science
+ Reason: economists are overrated
+ Claim + Reason: economics is not science economists are overrated
+ Warrant 0: economics is not exact
+ Warrant 1: science is not exact
+CorrectLabel: 0
+Answer: -1
+Claim + Reason Sentiment: 0
+Warrant0 Value: -0.194
+Warrant1 Value: -0.194
+
+ID: 14367579_566_A2QVMCGDLTWV9 
+ Debate Title: Are Same-Sex Colleges Still Relevant?
+Debate Info: Do same-sex colleges play an important role in education, or are they outdated?
+ Claim : singlesex education may be beneficial to some
+ Reason: samesex colleges are still relevant
+ Claim + Reason: singlesex education may be beneficial to some samesex colleges are still relevant
+ Warrant 0: singlesex education is not harmful to the majority
+ Warrant 1: singlesex education is harmful to the majority
+CorrectLabel: 0
+Answer: 1
+Claim + Reason Sentiment: -0.174
+Warrant0 Value: 2.318
+Warrant1 Value: -2.318
+
+-----------------------
+
