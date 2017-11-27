@@ -100,6 +100,7 @@ while(my $row = <$fh>)
 	$SentimentHash{$num}{word} = $temparray[0];
 	$SentimentHash{$num}{score} = $temparray[1];
 
+	$SentimentHash{$num}{score} =~ s/\n//g;
 	$num++;
 }
 
@@ -130,7 +131,7 @@ while(my $row = <$fh>)
 #Subroutines called#
 #Algorithm steps steps 3, 4, 5, 6
 reason_claim_sentiment_value(); #3
-warrant_sentiment_set(); #4
+#warrant_sentiment_set(); #4
 #COMAPRISION_SHOWDOWN(); #5
 #accuracy(); #6
 
@@ -167,7 +168,7 @@ sub reason_claim_sentiment_value{
 			{
 				my $score = $SentimentHash{$k2}{score};
 				$OverallHash{$k}{Reason} =~ s/\b$w\b/$w\_$score/g;
-				
+				$OverallHash{$k}{Reason} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
 			}
 
 			#Tag Claim
@@ -175,6 +176,7 @@ sub reason_claim_sentiment_value{
 			{
 				my $score = $SentimentHash{$k2}{score};
 				$OverallHash{$k}{Claim} =~ s/\b$w\b/$w\_$score/g;
+				$OverallHash{$k}{Claim} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
 			}
 
 
@@ -188,13 +190,45 @@ sub reason_claim_sentiment_value{
 			#$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
 		}
 
-		my @matches = $OverallHash{$k}{Reason_Claim_Combined} =~ /\b(not|yet|cannot)\b/g;
+		if($OverallHash{$k}{Reason} =~ /_NEG/)
+		{
+			print "------\n";
+			print "Before: \n";
+			my @split_text = split(' ',$OverallHash{$k}{Reason});
+			print Dumper \@split_text;
+			for (my $array_element = 0; $array_element < scalar @split_text; $array_element++)
+			{
+				if($split_text[$array_element] =~ /_NEG/)
+				{
+					#print "Contains NOT or CANNOT\n";
+					for (my $sub_loop = $array_element + 1; $sub_loop < scalar @split_text; $sub_loop++)
+					{
+						print $split_text[$sub_loop];
+						print " ";
+						if($split_text[$sub_loop] =~ /_-/)
+						{
+							$split_text[$sub_loop] =~ s/_-/_/g;
+						}
+						elsif($split_text[$sub_loop] =~ /_/)
+						{
+							$split_text[$sub_loop] =~ s/_/_-/g;
+						}
+					}
+				}
+			}
+			print "\nAfter:\n ";
+			print Dumper \@split_text;
+			$OverallHash{$k}{Reason} = join(" ", @split_text);
+		}
+		
+
+		#my @matches = $OverallHash{$k}{Reason_Claim_Combined} =~ /_NEG\b/g;
 		#print scalar @matches;
 		#print "\n";
-		if((scalar @matches) > 0)
-		{
-			$OverallHash{$k}{sentiment_value} = $OverallHash{$k}{sentiment_value} * (-1 ** (scalar @matches));	
-		}
+		#if((scalar @matches) > 0)
+		#{
+		#	$OverallHash{$k}{sentiment_value} = $OverallHash{$k}{sentiment_value} * (-1 ** (scalar @matches));	
+		#}
 	}	
 }
 
