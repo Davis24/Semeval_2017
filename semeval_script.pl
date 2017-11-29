@@ -184,8 +184,8 @@ accuracy(); #6
 # Algorithm Step #3
 # 1) For each of the sentiment values for the Reason_Claim_Combined
 # 2) Adds values together to determine if negative or positive overall
-sub reason_claim_sentiment_value{
-	print "Beginning Sentiment Values\n";
+sub sentiment_value_tagging{
+	#print "Beginning Sentiment Values\n";
 	foreach my $k (keys %OverallHash)
 	{
 		foreach my $k2 (keys %WordSentimentHash) 
@@ -195,30 +195,28 @@ sub reason_claim_sentiment_value{
 			#Tag Reason
 			if($OverallHash{$k}{Reason} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{	
-				$OverallHash{$k}{Reason} =~ s/\b$w\b/$w\_$score/g;
-				
+				$OverallHash{$k}{Reason} =~ s/\b$w\b/$w\_$score/g;		
 			}
 
 			#Tag Claim
 			if($OverallHash{$k}{Claim} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{
 				$OverallHash{$k}{Claim} =~ s/\b$w\b/$w\_$score/g;
-				
 			}
 
+			#Tag Warrant0
 			if($OverallHash{$k}{Warrant0} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{
 				$OverallHash{$k}{Warrant0} =~ s/\b$w\b/$w\_$score/g;
 				
 			}
 
+			#Tag Warrant1
 			if($OverallHash{$k}{Warrant1} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{
 				$OverallHash{$k}{Warrant1} =~ s/\b$w\b/$w\_$score/g;
 				
-			}
-
-			
+			}		
 		}
 
 		$OverallHash{$k}{Reason} =~ s/\b([a-zA-Z]+'t|cannot|not|no)\b/$1\_AFTER_NEG/g;
@@ -231,19 +229,19 @@ sub reason_claim_sentiment_value{
 		#$OverallHash{$k}{Warrant1} =~ s/\b(but|yet|however)\b/$1\_BEFORE_NEG/g;
 
 		############ Sentiment Value Tagging for Reason and Clain #######################
-		sentiment_value_sub($k, 'Reason', 'Reason_Value');
-		sentiment_value_sub($k, 'Claim', 'Claim_Value');
-		sentiment_value_sub($k, 'Warrant0', 'Warrant0_Sentiment');				
-		sentiment_value_sub($k, 'Warrant1', 'Warrant1_Sentiment');	
-		print "---------------------\n";
-		print "$OverallHash{$k}{ID} \n";
-		print "$OverallHash{$k}{Warrant0_Sentiment} + $OverallHash{$k}{Warrant1_Sentiment}\n";
+		sentiment_value_calc($k, 'Reason', 'Reason_Value');
+		sentiment_value_calc($k, 'Claim', 'Claim_Value');
+		sentiment_value_calc($k, 'Warrant0', 'Warrant0_Sentiment');				
+		sentiment_value_calc($k, 'Warrant1', 'Warrant1_Sentiment');	
+		#print "---------------------\n";
+		#print "$OverallHash{$k}{ID} \n";
+		#print "$OverallHash{$k}{Warrant0_Sentiment} + $OverallHash{$k}{Warrant1_Sentiment}\n";
 		$OverallHash{$k}{sentiment_value} = ($OverallHash{$k}{Reason_Value} + $OverallHash{$k}{Claim_Value});
-		print "$OverallHash{$k}{sentiment_value}\n";
+		#print "$OverallHash{$k}{sentiment_value}\n";
 	}	
 }
 
-sub sentiment_value_sub{
+sub sentiment_value_calc{
 	my ($key1, $key2, $value) = @_;
 
 	if($OverallHash{$key1}{$key2} =~ /_AFTER_NEG/)
@@ -278,9 +276,9 @@ sub sentiment_value_sub{
 	}
 		
 		
-		#print "\nMatches:\n";
+	#print "\nMatches:\n";
 	my @matches = ($OverallHash{$key1}{$key2} =~ /-?[0-9]*\.?[0-9]*/g);
-		#print scalar @matches;
+	#print scalar @matches;
 
 	@matches = grep { $_ ne '' } @matches;
 	@matches = grep { $_ ne '-' } @matches;
@@ -296,8 +294,8 @@ sub sentiment_value_sub{
 			#print " $num,";
 			$OverallHash{$key1}{$value} += $num;
 		}
-			#print "\n Value: ";
-			#print $OverallHash{$key1}{$value};
+		#print "\n Value: ";
+		#print $OverallHash{$key1}{$value};
 	}
 }
 
@@ -309,31 +307,23 @@ sub sentiment_value_sub{
 sub COMAPRISION_SHOWDOWN{
 	my $equal = 0;	
 
-	foreach my $yellow(keys %OverallHash)
+	foreach my $k(keys %OverallHash)
 	{
 		#Algorithm Step #5.1
-		my $warrant_0 = abs($OverallHash{$yellow}{sentiment_value} - $OverallHash{$yellow}{Warrant0_Sentiment});
-		my $warrant_1 = abs($OverallHash{$yellow}{sentiment_value} - $OverallHash{$yellow}{Warrant1_Sentiment});
-
-		#print "$Z1 : $Z2\n";
-
-		#Algorithm Step #5.2.1
-		if($OverallHash{$yellow}{sentiment_value} == 0)
-		{
-			#$equal++;
-		}
+		my $warrant_0 = abs($OverallHash{$k}{sentiment_value} - $OverallHash{$k}{Warrant0_Sentiment});
+		my $warrant_1 = abs($OverallHash{$k}{sentiment_value} - $OverallHash{$k}{Warrant1_Sentiment});
 
 		if($warrant_0 < $warrant_1)
 		{
-			$OverallHash{$yellow}{Answer} = '0';
+			$OverallHash{$k}{Answer} = '0';
 		}	
 		elsif ($warrant_1 < $warrant_0) #Algorithm Step #5.2.2
 		{
-			$OverallHash{$yellow}{Answer} = '1';
+			$OverallHash{$k}{Answer} = '1';
 		}
 		else #Algorithm Step #5.2.3
 		{
-			$OverallHash{$yellow}{Answer} = '-1';	
+			$OverallHash{$k}{Answer} = '-1';	
 			$equal++;
 		}
 	}
@@ -373,9 +363,6 @@ sub accuracy{
 			print "Warrant1 Value: $OverallHash{$key}{Warrant1_Sentiment}\n";
 			print "CorrectLabel: $OverallHash{$key}{CorrectLabel}\n";	
 			print "Answer: $OverallHash{$key}{Answer}\n";
-			
-			
-			
 			print "------------------------\n";
 		}
 		$totalLabels++;
