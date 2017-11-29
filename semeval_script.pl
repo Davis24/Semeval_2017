@@ -53,7 +53,7 @@ my $filename5 = $ARGV[4];
 
 # Variables
 my %OverallHash; #Hash containing all the data
-my %SentimentHash; #Hash containing the data from SCL-NMA.txt
+my %WordSentimentHash; #Hash containing the data from SCL-NMA.txt
 my %Results;
 my $num = 0; #Used assign a unique ID to hashes
 my $negated_changed_values = 0;
@@ -103,10 +103,10 @@ open($fh, '<', $filename2) or die "Could not open";
 while(my $row = <$fh>)
 {
 	#my @temparray = split('\t',$row);
-	#$SentimentHash{$num}{word} = $temparray[0];
-	#$SentimentHash{$num}{score} = $temparray[1];
+	#$WordSentimentHash{$num}{word} = $temparray[0];
+	#$WordSentimentHash{$num}{score} = $temparray[1];
 
-	#$SentimentHash{$num}{score} =~ s/\n//g;
+	#$WordSentimentHash{$num}{score} =~ s/\n//g;
 	#$num++;
 }
 
@@ -117,17 +117,17 @@ while(my $row = <$fh>)
 	#type=strongsubj len=1 word1=abuse pos1=verb stemmed1=y priorpolarity=negative type=weaksubj
 	my @temparray = split(' ',$row);
 	
-	$SentimentHash{$num}{word} = $temparray[2];
-	$SentimentHash{$num}{score} = join ",", $temparray[0], $temparray[5];
+	$WordSentimentHash{$num}{word} = $temparray[2];
+	$WordSentimentHash{$num}{score} = join ",", $temparray[0], $temparray[5];
 
 	#MAKES THESE BETTER
-	$SentimentHash{$num}{word} =~ s/word1=//g;
-	$SentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=negative/-1/g;
-	$SentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=positive/1/g;
-	$SentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=neutral/0/g;
-	$SentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=negative/-0.5/g;
-	$SentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=positive/0.5/g;
-	$SentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=neutral/0/g;
+	$WordSentimentHash{$num}{word} =~ s/word1=//g;
+	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=negative/-1/g;
+	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=positive/1/g;
+	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=neutral/0/g;
+	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=negative/-0.5/g;
+	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=positive/0.5/g;
+	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=neutral/0/g;
 	$num++;
 }
 
@@ -137,8 +137,8 @@ while(my $row = <$fh>)
 {
 
 	$row =~ s/\n//g;
-	$SentimentHash{$num}{word} = $row;
-	$SentimentHash{$num}{score} = 0.5;
+	$WordSentimentHash{$num}{word} = $row;
+	$WordSentimentHash{$num}{score} = 0.5;
 
 	$num++;
 }
@@ -148,8 +148,8 @@ while(my $row = <$fh>)
 {
 
 	$row =~ s/\n//g;
-	$SentimentHash{$num}{word} = $row;
-	$SentimentHash{$num}{score} = -0.5;
+	$WordSentimentHash{$num}{word} = $row;
+	$WordSentimentHash{$num}{score} = -0.5;
 
 	$num++;
 }
@@ -188,10 +188,10 @@ sub reason_claim_sentiment_value{
 	print "Beginning Sentiment Values\n";
 	foreach my $k (keys %OverallHash)
 	{
-		foreach my $k2 (keys %SentimentHash) 
+		foreach my $k2 (keys %WordSentimentHash) 
 		{
-			my $w = $SentimentHash{$k2}{word}; #assign word from sentiment to variable
-			my $score = $SentimentHash{$k2}{score};
+			my $w = $WordSentimentHash{$k2}{word}; #assign word from sentiment to variable
+			my $score = $WordSentimentHash{$k2}{score};
 			#Tag Reason
 			if($OverallHash{$k}{Reason} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{	
@@ -301,58 +301,6 @@ sub sentiment_value_sub{
 	}
 }
 
-#Calculate Warrant Sentiment
-# Algorithm Step #4
-# 1) For each of the warrants within a claim calculate the sentiment values
-# 2) Adds values together to determine negative or positive overall for the warrant
-sub warrant_sentiment_set{
-	print "Beginning Sentiment Warrants\n";
-	foreach my $x (keys %OverallHash)
-	{
-		foreach my $z (keys %SentimentHash) 
-		{
-			my $lt = $SentimentHash{$z}{word}; #assign word/phrase from sentiment to variable
-			my $score = $SentimentHash{$z}{score};
-
-
-			#Algorithm step 4.1.1
-			if($OverallHash{$x}{Warrant0} =~ /\b$lt\b/)
-			{
-				$OverallHash{$x}{Warrant0} =~ s/\b$lt\b/$lt\_$score/g;
-				$OverallHash{$x}{Warrant0_Sentiment} += $score;
-				$OverallHash{$x}{Warrant0_Sentiment} += $score;
-			}
-			#Algorithm step 4.1.1
-			if($OverallHash{$x}{Warrant1} =~ /\b$lt\b/)
-			{
-				$OverallHash{$x}{Warrant1} =~ s/\b$lt\b/$lt\_$score/g;
-				$OverallHash{$x}{Warrant1_Sentiment} += $score;	
-			}
-
-			$OverallHash{$x}{Warrant0} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
-			$OverallHash{$x}{Warrant1} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
-		}
-
-	
-	#FIX THIS	
-	#Algorithm Step 4.2 -- Negation of value if it contains negating words. Determined the number of negation words and negate based off that/
-	#my @matches = $OverallHash{$x}{Warrant0} =~ /\b(cannot|not|isnt|shouldnt|wouldnt|cant|yet|wont|havent)\b/g;
-	my @matches = $OverallHash{$x}{Warrant0} =~ /\b(not|yet|cannot)\b/g;
-	#print scalar @matches;
-	#print "\n";
-	if((scalar @matches) > 0)
-	{
-		$OverallHash{$x}{Warrant0_Sentiment} = $OverallHash{$x}{Warrant0_Sentiment} * (-1 ** (scalar @matches));
-	}
-	
-	@matches = $OverallHash{$x}{Warrant1} =~ /\b(not|yet|cannot)\b/g;
-	if((scalar @matches) > 0)
-	{
-		$OverallHash{$x}{Warrant1_Sentiment} = $OverallHash{$x}{Warrant1_Sentiment} * (-1 ** (scalar @matches));
-	}
-	
-	}	
-}
 
 #COMAPRISION SHOW DOWN (CAPS BECAUSE THIS IS IMPORTANT)
 # Algorithm Step #5
@@ -452,7 +400,7 @@ sub print_hash{
 	print "########################################\n";
 	print Dumper \%OverallHash;
 	print "########################################\n";
-	#print Dumper \%SentimentHash;
+	#print Dumper \%WordSentimentHash;
 	print "########################################\n";
 }
 
@@ -595,10 +543,4 @@ sub random_sample{
 	}
 }
 
-
-#Calculate Semantic Orientation -- Empty Subroutine  
-sub semantic_orientation{
-	my $pmi_one = shift;
-	my $pmi_two = shift;
-}
 
