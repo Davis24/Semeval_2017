@@ -40,7 +40,7 @@
 use warnings;
 use strict;
 use Data::Dumper qw(Dumper);
-#use Lingua::EN::Tagger; ## Currently not used in code #1 implementation
+use Lingua::EN::Tagger; ## Currently not used in code #1 implementation
 
 $Data::Dumper::Sortkeys = 1;
 
@@ -48,6 +48,8 @@ $Data::Dumper::Sortkeys = 1;
 my $filename = $ARGV[0];
 my $filename2 = $ARGV[1];
 my $filename3 = $ARGV[2];
+my $filename4 = $ARGV[3];
+my $filename5 = $ARGV[4];
 
 # Variables
 my %OverallHash; #Hash containing all the data
@@ -58,7 +60,7 @@ my $negated_changed_values = 0;
 
 
 # Variables Not Being Used -- but still declaring to avoid run errors.
-#my $p = new Lingua::EN::Tagger;
+my $p = new Lingua::EN::Tagger;
 my %unigram;
 my $unigram_frequency = 0;
 my $all_text;
@@ -73,14 +75,18 @@ while(my $row = <$fh>)
 	my @temparray = split('\t',$row);
 
 	$OverallHash{$num}{ID} = $temparray[0];
-	$OverallHash{$num}{Warrant0} = text_sanitation($temparray[1]);
-	$OverallHash{$num}{Warrant0_Sentiment} = 0;
-	$OverallHash{$num}{Warrant1_Sentiment} = 0;
-	$OverallHash{$num}{Warrant1} = text_sanitation($temparray[2]);
-	$OverallHash{$num}{CorrectLabel} = $temparray[3];
-	$OverallHash{$num}{Reason_Claim_Combined} = text_sanitation(join ",..., ", $temparray[4], $temparray[5]);
+
 	$OverallHash{$num}{Claim} = text_sanitation($temparray[4]);
 	$OverallHash{$num}{Reason} = text_sanitation($temparray[5]);
+	$OverallHash{$num}{Warrant0} = text_sanitation($temparray[1]);
+	$OverallHash{$num}{Warrant1} = text_sanitation($temparray[2]);
+	$OverallHash{$num}{Warrant0_Sentiment} = 0;
+	$OverallHash{$num}{Warrant1_Sentiment} = 0;
+	$OverallHash{$num}{Reason_Value} = 0;
+	$OverallHash{$num}{Claim_Value} = 0;
+
+
+	$OverallHash{$num}{CorrectLabel} = $temparray[3];
 	$OverallHash{$num}{Debate_Title} = $temparray[6];
 	$OverallHash{$num}{Debate_Info} = $temparray[7];
 	$OverallHash{$num}{Answer} = -1;
@@ -96,12 +102,12 @@ $num = 0;
 open($fh, '<', $filename2) or die "Could not open";	
 while(my $row = <$fh>)
 {
-	my @temparray = split('\t',$row);
-	$SentimentHash{$num}{word} = $temparray[0];
-	$SentimentHash{$num}{score} = $temparray[1];
+	#my @temparray = split('\t',$row);
+	#$SentimentHash{$num}{word} = $temparray[0];
+	#$SentimentHash{$num}{score} = $temparray[1];
 
-	$SentimentHash{$num}{score} =~ s/\n//g;
-	$num++;
+	#$SentimentHash{$num}{score} =~ s/\n//g;
+	#$num++;
 }
 
 #Reset Num
@@ -125,6 +131,29 @@ while(my $row = <$fh>)
 	$num++;
 }
 
+#positive
+open($fh, '<', $filename4) or die "Could not open";	
+while(my $row = <$fh>)
+{
+
+	$row =~ s/\n//g;
+	$SentimentHash{$num}{word} = $row;
+	$SentimentHash{$num}{score} = 0.5;
+
+	$num++;
+}
+
+open($fh, '<', $filename5) or die "Could not open";	
+while(my $row = <$fh>)
+{
+
+	$row =~ s/\n//g;
+	$SentimentHash{$num}{word} = $row;
+	$SentimentHash{$num}{score} = -0.5;
+
+	$num++;
+}
+
 
 ########################################################
 
@@ -132,10 +161,10 @@ while(my $row = <$fh>)
 #Algorithm steps steps 3, 4, 5, 6
 reason_claim_sentiment_value(); #3
 #warrant_sentiment_set(); #4
-#COMAPRISION_SHOWDOWN(); #5
-#accuracy(); #6
+COMAPRISION_SHOWDOWN(); #5
+accuracy(); #6
 
-print_hash(); #-- Can be used to print out OverallHash
+#print_hash(); #-- Can be used to print out OverallHash
 
 
 ############# Sub Routines ######################
@@ -162,49 +191,76 @@ sub reason_claim_sentiment_value{
 		foreach my $k2 (keys %SentimentHash) 
 		{
 			my $w = $SentimentHash{$k2}{word}; #assign word from sentiment to variable
-
+			my $score = $SentimentHash{$k2}{score};
 			#Tag Reason
-			if($OverallHash{$k}{Reason} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
-			{
-				my $score = $SentimentHash{$k2}{score};
+			if($OverallHash{$k}{Reason} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			{	
 				$OverallHash{$k}{Reason} =~ s/\b$w\b/$w\_$score/g;
-				$OverallHash{$k}{Reason} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
+				
 			}
 
 			#Tag Claim
-			if($OverallHash{$k}{Claim} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			if($OverallHash{$k}{Claim} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
 			{
-				my $score = $SentimentHash{$k2}{score};
 				$OverallHash{$k}{Claim} =~ s/\b$w\b/$w\_$score/g;
-				$OverallHash{$k}{Claim} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
+				
 			}
 
+			if($OverallHash{$k}{Warrant0} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			{
+				$OverallHash{$k}{Warrant0} =~ s/\b$w\b/$w\_$score/g;
+				
+			}
 
-			#if($OverallHash{$k}{Reason_Claim_Combined} =~ /\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
-			#{
-			#	my $score = $SentimentHash{$k2}{score};
-			#	$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b$w\b/$w\_$score/g;
-			#	$OverallHash{$k}{sentiment_value} += $score;
-			#}
+			if($OverallHash{$k}{Warrant1} =~ m/\b$w\b/) #if the sentiment contains the word/phrase add the sentiment value
+			{
+				$OverallHash{$k}{Warrant1} =~ s/\b$w\b/$w\_$score/g;
+				
+			}
 
-			#$OverallHash{$k}{Reason_Claim_Combined} =~ s/\b(not|yet|cannot)\b/$1\_NEG/g;
+			
 		}
 
-		if($OverallHash{$k}{Reason} =~ /_NEG/)
-		{
-			print "------\n";
-			print "Before: \n";
-			my @split_text = split(' ',$OverallHash{$k}{Reason});
-			print Dumper \@split_text;
+		$OverallHash{$k}{Reason} =~ s/\b([a-zA-Z]+'t|cannot|not|no)\b/$1\_AFTER_NEG/g;
+		#$OverallHash{$k}{Reason} =~ s/\b(but|yet|however)\b/$1\_BEFORE_NEG/g;
+		$OverallHash{$k}{Claim} =~ s/\b([a-zA-Z]+'t|cannot|not|no)\b/$1\_AFTER_NEG/g;
+		#$OverallHash{$k}{Claim} =~ s/\b(but|yet|however)\b/$1\_BEFORE_NEG/g;
+		$OverallHash{$k}{Warrant0} =~ s/\b([a-zA-Z]+'t|cannot|not|no)\b/$1\_AFTER_NEG/g;
+		#$OverallHash{$k}{Warrant0} =~ s/\b(but|yet|however)\b/$1\_BEFORE_NEG/g;
+		$OverallHash{$k}{Warrant1} =~ s/\b([a-zA-Z]+'t|cannot|not|no)\b/$1\_AFTER_NEG/g;
+		#$OverallHash{$k}{Warrant1} =~ s/\b(but|yet|however)\b/$1\_BEFORE_NEG/g;
+
+		############ Sentiment Value Tagging for Reason and Clain #######################
+		sentiment_value_sub($k, 'Reason', 'Reason_Value');
+		sentiment_value_sub($k, 'Claim', 'Claim_Value');
+		sentiment_value_sub($k, 'Warrant0', 'Warrant0_Sentiment');				
+		sentiment_value_sub($k, 'Warrant1', 'Warrant1_Sentiment');	
+		print "---------------------\n";
+		print "$OverallHash{$k}{ID} \n";
+		print "$OverallHash{$k}{Warrant0_Sentiment} + $OverallHash{$k}{Warrant1_Sentiment}\n";
+		$OverallHash{$k}{sentiment_value} = ($OverallHash{$k}{Reason_Value} + $OverallHash{$k}{Claim_Value});
+		print "$OverallHash{$k}{sentiment_value}\n";
+	}	
+}
+
+sub sentiment_value_sub{
+	my ($key1, $key2, $value) = @_;
+
+	if($OverallHash{$key1}{$key2} =~ /_AFTER_NEG/)
+	{
+			#print "------\n";
+			#print "Before: \n";
+			my @split_text = split(' ',$OverallHash{$key1}{$key2});
+			#print Dumper \@split_text;
 			for (my $array_element = 0; $array_element < scalar @split_text; $array_element++)
 			{
-				if($split_text[$array_element] =~ /_NEG/)
+				if($split_text[$array_element] =~ /_AFTER_NEG/)
 				{
 					#print "Contains NOT or CANNOT\n";
 					for (my $sub_loop = $array_element + 1; $sub_loop < scalar @split_text; $sub_loop++)
 					{
-						print $split_text[$sub_loop];
-						print " ";
+			#			print $split_text[$sub_loop];
+			#			print " ";
 						if($split_text[$sub_loop] =~ /_-/)
 						{
 							$split_text[$sub_loop] =~ s/_-/_/g;
@@ -216,20 +272,33 @@ sub reason_claim_sentiment_value{
 					}
 				}
 			}
-			print "\nAfter:\n ";
-			print Dumper \@split_text;
-			$OverallHash{$k}{Reason} = join(" ", @split_text);
-		}
+			#print "\nAfter:\n ";
+			#print Dumper \@split_text;
+			$OverallHash{$key1}{$key2} = join(" ", @split_text);
+	}
 		
-
-		#my @matches = $OverallHash{$k}{Reason_Claim_Combined} =~ /_NEG\b/g;
+		
+		#print "\nMatches:\n";
+	my @matches = ($OverallHash{$key1}{$key2} =~ /-?[0-9]*\.?[0-9]*/g);
 		#print scalar @matches;
-		#print "\n";
-		#if((scalar @matches) > 0)
-		#{
-		#	$OverallHash{$k}{sentiment_value} = $OverallHash{$k}{sentiment_value} * (-1 ** (scalar @matches));	
-		#}
-	}	
+
+	@matches = grep { $_ ne '' } @matches;
+	@matches = grep { $_ ne '-' } @matches;
+	@matches = grep { $_ ne '.' } @matches;
+	#print Dumper \@matches;
+
+	#print "\n Math \n";
+	if((scalar @matches) > 0)
+	{
+		foreach my $num (@matches)
+		{
+			#print "VALUE: $value \n";
+			#print " $num,";
+			$OverallHash{$key1}{$value} += $num;
+		}
+			#print "\n Value: ";
+			#print $OverallHash{$key1}{$value};
+	}
 }
 
 #Calculate Warrant Sentiment
@@ -291,6 +360,7 @@ sub warrant_sentiment_set{
 # 2) Assigns the answer to Hash for comparision
 sub COMAPRISION_SHOWDOWN{
 	my $equal = 0;	
+
 	foreach my $yellow(keys %OverallHash)
 	{
 		#Algorithm Step #5.1
@@ -302,8 +372,9 @@ sub COMAPRISION_SHOWDOWN{
 		#Algorithm Step #5.2.1
 		if($OverallHash{$yellow}{sentiment_value} == 0)
 		{
-			$equal++;
+			#$equal++;
 		}
+
 		if($warrant_0 < $warrant_1)
 		{
 			$OverallHash{$yellow}{Answer} = '0';
@@ -318,7 +389,7 @@ sub COMAPRISION_SHOWDOWN{
 			$equal++;
 		}
 	}
-	print "Instances in which the Warrants are of equal sentiment value or Claim+Reason sentiment value = 0: $equal \n";
+	print "Instances in which warrants = 0.... : $equal \n";
 }
 
 #Checks how many claims were accurately tagged (currently using randomness baseline) 
@@ -339,21 +410,25 @@ sub accuracy{
 		}
 		else
 		{
-			#print "------------------------\n";
-			#print "ID: $OverallHash{$key}{ID} \n ";
-			#print "Debate Title: $OverallHash{$key}{Debate_Title}\n";
-			#print "Debate Info: $OverallHash{$key}{Debate_Info} ";
-			#print "Claim : $OverallHash{$key}{Claim}\n ";
-			#print "Reason: $OverallHash{$key}{Reason}\n ";
-			#print "Claim + Reason: $OverallHash{$key}{Reason_Claim_Combined}\n ";
-			#print "Warrant 0: $OverallHash{$key}{Warrant0}\n ";
-			#print "Warrant 1: $OverallHash{$key}{Warrant1}\n";
-			#print "CorrectLabel: $OverallHash{$key}{CorrectLabel}\n";	
-			#print "Answer: $OverallHash{$key}{Answer}\n";
-			#print "Claim + Reason Sentiment: $OverallHash{$key}{sentiment_value}\n";
-			#print "Warrant0 Value: $OverallHash{$key}{Warrant0_Sentiment}\n";					
-			#print "Warrant1 Value: $OverallHash{$key}{Warrant1_Sentiment}\n";
-			#print "------------------------\n";
+			print "------------------------\n";
+			print "ID: $OverallHash{$key}{ID} \n ";
+			print "Debate Title: $OverallHash{$key}{Debate_Title}\n";
+			print "Debate Info: $OverallHash{$key}{Debate_Info} ";
+			print "Claim : $OverallHash{$key}{Claim}\n ";
+			print "Claim : $OverallHash{$key}{Claim_Value}\n ";
+			print "Reason: $OverallHash{$key}{Reason}\n ";
+			print "Reason: $OverallHash{$key}{Reason_Value}\n ";
+			print "Claim + Reason Sentiment: $OverallHash{$key}{sentiment_value}\n";
+			print "Warrant 0: $OverallHash{$key}{Warrant0}\n ";
+			print "Warrant0 Value: $OverallHash{$key}{Warrant0_Sentiment}\n";					
+			print "Warrant 1: $OverallHash{$key}{Warrant1}\n";
+			print "Warrant1 Value: $OverallHash{$key}{Warrant1_Sentiment}\n";
+			print "CorrectLabel: $OverallHash{$key}{CorrectLabel}\n";	
+			print "Answer: $OverallHash{$key}{Answer}\n";
+			
+			
+			
+			print "------------------------\n";
 		}
 		$totalLabels++;
 	}
@@ -379,14 +454,13 @@ sub print_hash{
 	print "########################################\n";
 	#print Dumper \%SentimentHash;
 	print "########################################\n";
-	print Dumper \%SentimentHash;
-	print "########################################\n";
 }
 
 ## Sanatizes Text
 sub text_sanitation{
 	my $my_text = $_[0];
-	$my_text =~ s/n't/ not/g;
+	#$my_text =~ s/n't/ not/g;
+	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
 	#$my_text =~ s/[[:punct:]]//g;
 	$my_text =~ s/\n+/\n/g;
 	$my_text =~ s/\s+/ /g;
@@ -406,33 +480,6 @@ sub output_confidence_csv{
 ################################################
 #		NOT USED SUB ROUTINES
 ###############################################
-
-#attempted negation method
-sub negate{
-	
-	my $id = shift;
-
-
-	my $warrant_0 = abs($OverallHash{$id}{sentiment_value} - $OverallHash{$id}{Warrant0_Sentiment});
-	my $warrant_1 = abs($OverallHash{$id}{sentiment_value} - $OverallHash{$id}{Warrant1_Sentiment});
-
-	if($warrant_0 < $warrant_1)
-		{
-
-			$OverallHash{$id}{Answer} = '0';
-			$negated_changed_values++;
-		}	
-		elsif ($warrant_1 < $warrant_0) #Algorithm Step #5.2.2
-		{
-			$OverallHash{$id}{Answer} = '1';
-			$negated_changed_values++;
-		}
-		else #Algorithm Step #5.2.3
-		{
-			$OverallHash{$id}{Answer} = '-1';	
-		}	
-
-}
 
 # creates a bi-gram of $all_text
 sub create_bigram{
@@ -530,20 +577,6 @@ sub pointwise_mutual_information{
 	my $PMI = log($co_occur / ($word1 * $word2))/log(2);
 
 	print "PMI: $PMI";
-}
-
-#Prints out Overall Hash -- missing some of the values, hasn't been updated
-sub print_out_overall_hash{
-	foreach my $key(keys %OverallHash)
-	{
-		print "------------------------";
-		print "$OverallHash{$key}{ID} ~ ";
-		print "$OverallHash{$key}{Debate_Title} ~ ";
-		print "$OverallHash{$key}{Debate_Info} ~ ";
-		print "$OverallHash{$key}{Warrant0} ~ ";
-		print "$OverallHash{$key}{Warrant1} ~";
-		print "$OverallHash{$key}{CorrectLabel} ~";
-	}
 }
 
 #Uses rand to 'guess' the answers
