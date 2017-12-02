@@ -175,7 +175,6 @@ sub sentiment_value_tagging_senti
 			data_value_tagging($k, 'Claim_Tagged', $k2);
 			data_value_tagging($k, 'Warrant0_Tagged', $k2);
 			data_value_tagging($k, 'Warrant1_Tagged', $k2);
-
 		}
 
 		sentiment_value_calc_for_senti($k,'Reason_Tagged', 'Reason_Value', 'Reason_Negation_Scope');
@@ -205,35 +204,7 @@ sub data_value_tagging{
 #Calculates
 sub sentiment_value_calc_for_senti{
 	my ($key1, $key2, $value, $negation) = @_;
-=begin comment
-	if(defined $OverallHash{$key1}{$negation})
-	{
-		#print "-------------\n";
-		my @split_text = split(',',$OverallHash{$key1}{$negation});
-		my @split_hash_text = split (' ',$OverallHash{$key1}{$key2});
-		#print Dumper \@split_text;
-		#print Dumper \@split_hash_text;
 
-		for (my $sub_loop = $split_text[0]; $sub_loop <= $split_text[1]; $sub_loop++)
-		{
-			#print $split_text[$sub_loop];
-			#print " ";
-			if($split_hash_text[$sub_loop] =~ /\(/)
-			{
-				$split_hash_text[$sub_loop] =~ s/\(/\(-/g;
-			}
-			elsif($split_hash_text[$sub_loop] =~ /\(-/)
-			{
-				$split_hash_text[$sub_loop] =~ s/\(-/\(/g;
-			}
-		}
-			#print "\nAfter:\n ";
-		#print Dumper \@split_text;
-		$OverallHash{$key1}{$key2} = join(" ", @split_hash_text);		
-	}
-
-=end
-=cut
 	if($OverallHash{$key1}{$key2} =~ /\b(n't#r|not#r|cannot#n|cannot#v)\b/)
 	{
 		#print "------\n";
@@ -277,96 +248,6 @@ sub sentiment_value_calc_for_senti{
 		}
 	}
 }
-
-#print_hash();
-
-=begin comment
-
-#Reset Num
-open($fh, '<', $filename3) or die "Could not open";	
-while(my $row = <$fh>)
-{
-	#type=strongsubj len=1 word1=abuse pos1=verb stemmed1=y priorpolarity=negative type=weaksubj
-	my @temparray = split(' ',$row);
-	
-	$WordSentimentHash{$num}{word} = $temparray[2];
-	$WordSentimentHash{$num}{score} = join ",", $temparray[0], $temparray[5];
-
-	#MAKES THESE BETTER
-	$WordSentimentHash{$num}{word} =~ s/word1=//g;
-
-	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=negative/-1/g;
-	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=positive/1/g;
-	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=neutral/0/g;
-	$WordSentimentHash{$num}{score} =~ s/type=strongsubj,priorpolarity=both/0/g;
-	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=negative/-0.5/g;
-	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=positive/0.5/g;
-	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=neutral/0/g;
-	$WordSentimentHash{$num}{score} =~ s/type=weaksubj,priorpolarity=both/0/g;
-
-	if(exists $Word_Duplicate_Hash{$WordSentimentHash{$num}{word}})
-	{
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred}++;
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-	else
-	{
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred} = 1; 
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-	$num++;
-}
-
-#positive
-open($fh, '<', $filename4) or die "Could not open";	
-while(my $row = <$fh>)
-{
-
-	$row =~ s/\n//g;
-	$WordSentimentHash{$num}{word} = $row;
-	$WordSentimentHash{$num}{score} = 0.5;
-
-	if(exists $Word_Duplicate_Hash{$WordSentimentHash{$num}{word}})
-	{
-		#$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred}++;
-		#$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-	else
-	{
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred} = 1; 
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-
-	$num++;
-}
-
-open($fh, '<', $filename5) or die "Could not open";	
-while(my $row = <$fh>)
-{
-	
-
-	$row =~ s/\n//g;
-	$WordSentimentHash{$num}{word} = $row;
-	$WordSentimentHash{$num}{score} = -0.5;
-	
-	if(exists $Word_Duplicate_Hash{$WordSentimentHash{$num}{word}})
-	{
-		#$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred}++;
-		#$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-	else
-	{
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{timesoccurred} = 1; 
-		$Word_Duplicate_Hash{$WordSentimentHash{$num}{word}}{score} += $WordSentimentHash{$num}{score};
-	}
-
-	$num++;
-}
-
-=end comment
-=cut
-
-
 
 ########################################################
 
@@ -582,30 +463,6 @@ sub create_tagged_bigram{
 			}
 		}
 	}
-}
-
-#Calculates PMI 
-#Must create unigram first
-#Pass in Word1 and Word2
-sub pointwise_mutual_information{
-	#info from unigram
-	my $word1= shift;
-	my $word2 = shift;
-	#info from bigram
-	my $co_occur = shift;
-	
-	$word1 = $word1 / $unigram_frequency;
-	$word2 = $word2 / $unigram_frequency;
-
-	$co_occur = $co_occur / $bigram_frequency;
-
-	print "Word1 Prob: $word1 \n";
-	print "Word2 Prob: $word2 \n";
-	print "Co_Occur Prob: $co_occur \n";
-
-	my $PMI = log($co_occur / ($word1 * $word2))/log(2);
-
-	print "PMI: $PMI";
 }
 
 #Uses rand to 'guess' the answers
