@@ -40,7 +40,7 @@
 use warnings;
 use strict;
 use Data::Dumper qw(Dumper);
-use Lingua::EN::Tagger; ## Currently not used in code #1 implementation
+use Lingua::EN::Tagger;
 use Lingua::NegEx qw( negation_scope );
 
 $Data::Dumper::Sortkeys = 1;
@@ -48,18 +48,15 @@ $Data::Dumper::Sortkeys = 1;
 # Files: Currently utilizes two files dev-full.txt, SCL-NMA.txt
 my $filename = $ARGV[0];
 my $filename2 = $ARGV[1];
-my $filename3 = $ARGV[2];
-my $filename4 = $ARGV[3];
-my $filename5 = $ARGV[4];
 
 # Variables
 my %OverallHash; #Hash containing all the data
-my %WordSentimentHash; #Hash containing the data from SCL-NMA.txt
+#my %WordSentimentHash; #Hash containing the data from SCL-NMA.txt
 my %SentiWordHash;
-my %Word_Duplicate_Hash;
+#my %Word_Duplicate_Hash;
 my %Results;
-my $num = 0; #Used assign a unique ID to hashes
-my $negated_changed_values = 0;
+#my $num = 0; #Used assign a unique ID to hashes
+#my $negated_changed_values = 0;
 
 
 # Variables Not Being Used -- but still declaring to avoid run errors.
