@@ -105,7 +105,7 @@ while(my $row = <$fh>)
 	$OverallHash{$temparray[0]}{Warrant0_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
 	
 =begin
-	$array_ref = negation_scope($temparray[1]);
+  	$array_ref = negation_scope($temparray[1]);
 	if (scalar $array_ref > 0)
 	{
 		$OverallHash{$temparray[0]}{Warrant0_Negation_Scope} = join (',',@$array_ref);
@@ -138,7 +138,6 @@ while(my $row = <$fh>)
 	$OverallHash{$temparray[0]}{Debate_Title} = $temparray[6];
 	$OverallHash{$temparray[0]}{Debate_Info} = $temparray[7];
 	$OverallHash{$temparray[0]}{Answer} = -1;
-	$OverallHash{$temparray[0]}{sentiment_value} = 0;	
 
 	data_set_tag_mapping($temparray[0], 'Reason_Tagged');
 	data_set_tag_mapping($temparray[0], 'Reason_Stemmed_Tagged');
@@ -258,6 +257,8 @@ sub sentiment_value_calc_for_senti{
 		{	
 			$OverallHash{$key1}{$value} += $num;
 		}
+
+		$OverallHash{$key1}{$value} = $OverallHash{$key1}{$value} / scalar @matches;
 	}
 
 
