@@ -40,6 +40,8 @@
 use warnings;
 use strict;
 use Data::Dumper qw(Dumper);
+#use Lingua::Stem qw(stem);
+use Text::English;
 use Lingua::EN::Tagger;
 use Lingua::NegEx qw( negation_scope );
 
@@ -51,12 +53,9 @@ my $filename2 = $ARGV[1];
 
 # Variables
 my %OverallHash; #Hash containing all the data
-#my %WordSentimentHash; #Hash containing the data from SCL-NMA.txt
 my %SentiWordHash;
-#my %Word_Duplicate_Hash;
 my %Results;
-#my $num = 0; #Used assign a unique ID to hashes
-#my $negated_changed_values = 0;
+
 
 
 # Variables Not Being Used -- but still declaring to avoid run errors.
@@ -84,7 +83,10 @@ while(my $row = <$fh>)
 		#print $OverallHash{$temparray[0]}{Reason_Negation_Scope} . "\n";
 	}
 =cut
+	
 	$OverallHash{$temparray[0]}{Reason} = text_sanitation($temparray[5]);
+	my @temp_array_text = split (' ', $OverallHash{$temparray[0]}{Reason});
+	$OverallHash{$temparray[0]}{Reason_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
 	$OverallHash{$temparray[0]}{Reason_Tagged} = $p->get_readable(text_sanitation($temparray[5]));
 =begin	
 	$array_ref = negation_scope($temparray[5]);
@@ -99,6 +101,9 @@ while(my $row = <$fh>)
 
 	$OverallHash{$temparray[0]}{Warrant0} = text_sanitation($temparray[1]);
 	$OverallHash{$temparray[0]}{Warrant0_Tagged} = $p->get_readable(text_sanitation($temparray[1]));
+	@temp_array_text = split (' ', $OverallHash{$temparray[0]}{Warrant0});
+	$OverallHash{$temparray[0]}{Warrant0_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
+	
 =begin
 	$array_ref = negation_scope($temparray[1]);
 	if (scalar $array_ref > 0)
@@ -109,6 +114,9 @@ while(my $row = <$fh>)
 =cut
 	$OverallHash{$temparray[0]}{Warrant1} = text_sanitation($temparray[2]);
 	$OverallHash{$temparray[0]}{Warrant1_Tagged} = $p->get_readable(text_sanitation($temparray[2]));
+	@temp_array_text = split (' ', $OverallHash{$temparray[0]}{Warrant1});
+	$OverallHash{$temparray[0]}{Warrant1_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
+	
 =begin
 	$array_ref = negation_scope($temparray[2]);
 	if (scalar $array_ref > 0)
@@ -120,6 +128,9 @@ while(my $row = <$fh>)
 	$OverallHash{$temparray[0]}{Warrant0_Value} = 0;
 	$OverallHash{$temparray[0]}{Warrant1_Value} = 0;
 	$OverallHash{$temparray[0]}{Reason_Value} = 0;
+	$OverallHash{$temparray[0]}{Reason_Stemmed_Value} = 0;
+	$OverallHash{$temparray[0]}{Warrant0_Stemmed_Value} = 0;
+	$OverallHash{$temparray[0]}{Warrant1_Stemmed_Value} = 0;
 	$OverallHash{$temparray[0]}{Claim_Value} = 0;
 
 
@@ -130,8 +141,11 @@ while(my $row = <$fh>)
 	$OverallHash{$temparray[0]}{sentiment_value} = 0;	
 
 	data_set_tag_mapping($temparray[0], 'Reason_Tagged');
+	data_set_tag_mapping($temparray[0], 'Reason_Stemmed_Tagged');
 	data_set_tag_mapping($temparray[0], 'Claim_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant0_Tagged');
+	data_set_tag_mapping($temparray[0], 'Warrant0_Stemmed_Tagged');
+	data_set_tag_mapping($temparray[0], 'Warrant1_Stemmed_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant1_Tagged');
 
 }
@@ -169,20 +183,23 @@ sub sentiment_value_tagging_senti
 		foreach my $k2 (keys %SentiWordHash) 
 		{
 			data_value_tagging($k, 'Reason_Tagged', $k2);
+			data_value_tagging($k, 'Reason_Stemmed_Tagged', $k2);
 			data_value_tagging($k, 'Claim_Tagged', $k2);
 			data_value_tagging($k, 'Warrant0_Tagged', $k2);
+			data_value_tagging($k, 'Warrant0_Stemmed_Tagged', $k2);
 			data_value_tagging($k, 'Warrant1_Tagged', $k2);
+			data_value_tagging($k, 'Warrant1_Stemmed_Tagged', $k2);
 		}
 
 		sentiment_value_calc_for_senti($k,'Reason_Tagged', 'Reason_Value', 'Reason_Negation_Scope');
+		sentiment_value_calc_for_senti($k,'Reason_Stemmed_Tagged', 'Reason_Stemmed_Value', 'Reason_Negation_Scope');
 		sentiment_value_calc_for_senti($k,'Claim_Tagged', 'Claim_Value', 'Claim_Negation_Scope');
 		sentiment_value_calc_for_senti($k,'Warrant0_Tagged', 'Warrant0_Value', 'Warrant0_Negation_Scope');
+		sentiment_value_calc_for_senti($k,'Warrant0_Stemmed_Tagged', 'Warrant0_Stemmed_Value', 'Warrant0_Negation_Scope');
 		sentiment_value_calc_for_senti($k,'Warrant1_Tagged', 'Warrant1_Value', 'Warrant1_Negation_Scope');
+		sentiment_value_calc_for_senti($k,'Warrant1_Stemmed_Tagged', 'Warrant1_Stemmed_Value', 'Warrant1_Negation_Scope');
+
 	}
-}
-
-sub check_values{
-
 }
 
 #Tags Value of Words
@@ -195,14 +212,13 @@ sub data_value_tagging{
 		$OverallHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
 		#print "$1 : $w \n";
 	}
-
 }
 
 #Calculates
 sub sentiment_value_calc_for_senti{
 	my ($key1, $key2, $value, $negation) = @_;
 
-	if($OverallHash{$key1}{$key2} =~ /\b(n't#r|not#r|cannot#n|cannot#v)\b/)
+	if($OverallHash{$key1}{$key2} =~ /\b(n't#r|not#r|cannot#n|cannot#v|not#n|no\/DET)\b/)
 	{
 		#print "------\n";
 		#print "Before: \n";
@@ -210,7 +226,7 @@ sub sentiment_value_calc_for_senti{
 		#print Dumper \@split_text;
 		for (my $array_element = 0; $array_element < scalar @split_text; $array_element++)
 		{
-			if($split_text[$array_element] =~ /\b(n't#r|not#r|cannot#n|cannot#v)\b/)
+			if($split_text[$array_element] =~ /\b(n't#r|not#r|cannot#n|cannot#v|not#n|no\/DET)\b/)
 			{
 				#print "Contains NOT or CANNOT\n";
 				for (my $sub_loop = $array_element + 1; $sub_loop < scalar @split_text; $sub_loop++)
@@ -234,7 +250,6 @@ sub sentiment_value_calc_for_senti{
 		$OverallHash{$key1}{$key2} = join(" ", @split_text);
 	}
 
-
 	my @matches = ($OverallHash{$key1}{$key2} =~ /-?[0-9]+\.?[0-9]+/g);
 
 	if((scalar @matches) > 0)
@@ -244,6 +259,10 @@ sub sentiment_value_calc_for_senti{
 			$OverallHash{$key1}{$value} += $num;
 		}
 	}
+
+
+	
+
 }
 
 ########################################################
@@ -252,7 +271,7 @@ sub sentiment_value_calc_for_senti{
 COMAPRISION_SHOWDOWN(); #5
 accuracy(); #6
 
-#print_hash(); #-- Can be used to print out OverallHash
+print_hash(); #-- Can be used to print out OverallHash
 
 
 ############# Sub Routines ######################
@@ -281,8 +300,11 @@ sub COMAPRISION_SHOWDOWN{
 		#my $warrant_0 = abs(($OverallHash{$k}{Reason_Value} + $OverallHash{$k}{Claim_Value}) - $OverallHash{$k}{Warrant0_Value});
 		#my $warrant_1 = abs(($OverallHash{$k}{Reason_Value} + $OverallHash{$k}{Claim_Value}) - $OverallHash{$k}{Warrant1_Value});
 
-		my $warrant_0 = abs($OverallHash{$k}{Reason_Value} - $OverallHash{$k}{Warrant0_Value});
-		my $warrant_1 = abs($OverallHash{$k}{Reason_Value} - $OverallHash{$k}{Warrant1_Value});
+	#my $warrant_0 = abs($OverallHash{$k}{Reason_Value} - $OverallHash{$k}{Warrant0_Value});
+	#my $warrant_1 = abs($OverallHash{$k}{Reason_Value} - $OverallHash{$k}{Warrant1_Value});
+	my $warrant_0 = abs($OverallHash{$k}{Reason_Stemmed_Value} - $OverallHash{$k}{Warrant0_Stemmed_Value});
+	my $warrant_1 = abs($OverallHash{$k}{Reason_Stemmed_Value} - $OverallHash{$k}{Warrant1_Stemmed_Value});
+
 
 		if($warrant_0 < $warrant_1)
 		{
@@ -325,12 +347,21 @@ sub accuracy{
 			#print "Debate Info: $OverallHash{$key}{Debate_Info} ";
 			#print "Claim : $OverallHash{$key}{Claim_Tagged}\n ";
 			#print "Claim : $OverallHash{$key}{Claim_Value}\n ";
-			print "Reason: $OverallHash{$key}{Reason_Tagged}\n ";
-			print "Reason: $OverallHash{$key}{Reason_Value}\n ";
-			print "Warrant 0: $OverallHash{$key}{Warrant0_Tagged}\n ";
-			print "Warrant0 Value: $OverallHash{$key}{Warrant0_Value}\n";					
-			print "Warrant 1: $OverallHash{$key}{Warrant1_Tagged}\n";
-			print "Warrant1 Value: $OverallHash{$key}{Warrant1_Value}\n";
+			print "Reason_stem: $OverallHash{$key}{Reason_Stemmed_Tagged}\n";
+			print "Reason_stem: $OverallHash{$key}{Reason_Stemmed_Value}\n ";
+			#print "Reason: $OverallHash{$key}{Reason_Tagged}\n ";
+			#print "Reason: $OverallHash{$key}{Reason_Value}\n ";
+			#print "Warrant 0: $OverallHash{$key}{Warrant0_Tagged}\n ";
+			print "Warrant0_stemmed: $OverallHash{$key}{Warrant0_Stemmed_Tagged}\n";
+			print "Warrant0_stem_value: $OverallHash{$key}{Warrant0_Stemmed_Value}\n";					
+			
+			#print "Warrant0 Value: $OverallHash{$key}{Warrant0_Value}\n";					
+			print "Warrant1_stemmed: $OverallHash{$key}{Warrant1_Stemmed_Tagged}\n";
+			print "Warrant1 Value_stemmed: $OverallHash{$key}{Warrant1_Stemmed_Value}\n";					
+			
+			#print "Warrant 1: $OverallHash{$key}{Warrant1_Tagged}\n";
+
+			#print "Warrant1 Value: $OverallHash{$key}{Warrant1_Value}\n";
 			print "CorrectLabel: $OverallHash{$key}{CorrectLabel}\n";	
 			print "Answer: $OverallHash{$key}{Answer}\n";
 			print "------------------------\n";
@@ -369,6 +400,8 @@ sub text_sanitation{
 	#$my_text =~ s/n't/ not/g;
 	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
 	#$my_text =~ s/[[:punct:]]//g;
+	$my_text =~ s/-/ /g;
+	$my_text =~ s/\bbe\b//g;
 	$my_text =~ s/\n+/\n/g;
 	$my_text =~ s/\s+/ /g;
 	$my_text = lc($my_text);
