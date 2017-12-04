@@ -40,7 +40,6 @@
 use warnings;
 use strict;
 use Data::Dumper qw(Dumper);
-use Text::English;
 use Lingua::EN::Tagger;
 
 $Data::Dumper::Sortkeys = 1;
@@ -53,10 +52,8 @@ my $filename2 = $ARGV[1];
 my $p = new Lingua::EN::Tagger; ## For a list of the tags it used (Penn Treebank) reference http://cpansearch.perl.org/src/ACOBURN/Lingua-EN-Tagger-0.28/README
 my %DataHash; #Hash containing all the data
 my %SentiWordHash;
-#my %Results;
 
 # Variables Not Being Used -- but still declaring to avoid run errors.
-
 my %unigram;
 my $unigram_frequency = 0;
 my $all_text;
@@ -72,33 +69,24 @@ while(my $row = <$fh>)
 
 	### Claim ###
 	$DataHash{$temparray[0]}{Claim} = text_sanitation($temparray[4]);
-	#$DataHash{$temparray[0]}{Claim_Tagged} = $p->get_readable(text_sanitation($temparray[4]));
+	$DataHash{$temparray[0]}{Claim_Tagged} = $p->get_readable(text_sanitation($temparray[4]));
 
 	### Reason ###
 	$DataHash{$temparray[0]}{Reason} = text_sanitation($temparray[5]);
-	my @temp_array_text = split (' ', $DataHash{$temparray[0]}{Reason});
-	$DataHash{$temparray[0]}{Reason_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
 	$DataHash{$temparray[0]}{Reason_Tagged} = $p->get_readable(text_sanitation($temparray[5]));
 
 	### Warrant0 ###
 	$DataHash{$temparray[0]}{Warrant0} = text_sanitation($temparray[1]);
 	$DataHash{$temparray[0]}{Warrant0_Tagged} = $p->get_readable(text_sanitation($temparray[1]));
-	@temp_array_text = split (' ', $DataHash{$temparray[0]}{Warrant0});
-	$DataHash{$temparray[0]}{Warrant0_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
 	
 	### Warrant1 ###
 	$DataHash{$temparray[0]}{Warrant1} = text_sanitation($temparray[2]);
 	$DataHash{$temparray[0]}{Warrant1_Tagged} = $p->get_readable(text_sanitation($temparray[2]));
-	@temp_array_text = split (' ', $DataHash{$temparray[0]}{Warrant1});
-	$DataHash{$temparray[0]}{Warrant1_Stemmed_Tagged} =$p->get_readable(text_sanitation(join (' ',Text::English::stem( @temp_array_text))));
-
+	
 	### Value Assignment ###
 	$DataHash{$temparray[0]}{Warrant0_Value} = 0;
 	$DataHash{$temparray[0]}{Warrant1_Value} = 0;
 	$DataHash{$temparray[0]}{Reason_Value} = 0;
-	$DataHash{$temparray[0]}{Reason_Stemmed_Value} = 0;
-	$DataHash{$temparray[0]}{Warrant0_Stemmed_Value} = 0;
-	$DataHash{$temparray[0]}{Warrant1_Stemmed_Value} = 0;
 	$DataHash{$temparray[0]}{Claim_Value} = 0;
 	$DataHash{$temparray[0]}{CorrectLabel} = $temparray[3];
 	$DataHash{$temparray[0]}{Debate_Title} = $temparray[6];
@@ -108,19 +96,17 @@ while(my $row = <$fh>)
 
 	### Call to convert Tagger tags to SentiNet tags ###
 	data_set_tag_mapping($temparray[0], 'Reason_Tagged');
-	data_set_tag_mapping($temparray[0], 'Reason_Stemmed_Tagged');
-	#data_set_tag_mapping($temparray[0], 'Claim_Tagged');
+	data_set_tag_mapping($temparray[0], 'Claim_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant0_Tagged');
-	data_set_tag_mapping($temparray[0], 'Warrant0_Stemmed_Tagged');
-	data_set_tag_mapping($temparray[0], 'Warrant1_Stemmed_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant1_Tagged');
 
 }
  
+
+ ### Opening and loading in the data from SentiNet_1.0 ###
 open($fh, '<', $filename2) or die "Could not open SentiWordNet File.";	
 while(my $row = <$fh>)
 {
-	# lemma#PoS	prior_polarity_score
 	if($row =~ m/(.*)\s-?+[0-9.]{2,}\n$/)
 	{
 		$row =~ s/\n//g;
@@ -129,9 +115,9 @@ while(my $row = <$fh>)
 	}
 }
 
-sentiment_value_tagging_senti();
+sentiment_value_tagging();
 
-#Used to map the tags from Tagger to SentiNet's tags, 
+### Used to map the tags from Perl module Tagger to SentiNet's tags ###
 sub data_set_tag_mapping
 {
 	my ($id, $key2) = @_;
@@ -142,32 +128,68 @@ sub data_set_tag_mapping
 	$DataHash{$id}{$key2} =~ s/\/(MD|VBN|VBD|VBG|VBP|VBZ|VB)/#v/g;	
 }
 
-#Adds the Sentiment Values tags & Calls for data to be calculated
-sub sentiment_value_tagging_senti
+### Calls data_value_tagging to add the sentiment values to the data from SentiNet, and then calculates the values from ###
+sub sentiment_value_tagging
 {
 	foreach my $k (keys %DataHash)
 	{
 		foreach my $k2 (keys %SentiWordHash) 
 		{
 			data_value_tagging($k, 'Reason_Tagged', $k2);
-			data_value_tagging($k, 'Reason_Stemmed_Tagged', $k2);
-			#data_value_tagging($k, 'Claim_Tagged', $k2);
+			data_value_tagging($k, 'Claim_Tagged', $k2);
 			data_value_tagging($k, 'Warrant0_Tagged', $k2);
-			data_value_tagging($k, 'Warrant0_Stemmed_Tagged', $k2);
 			data_value_tagging($k, 'Warrant1_Tagged', $k2);
-			data_value_tagging($k, 'Warrant1_Stemmed_Tagged', $k2);
 		}
 
-		sentiment_value_calc_for_senti($k,'Reason_Tagged', 'Reason_Value');
-		sentiment_value_calc_for_senti($k,'Reason_Stemmed_Tagged', 'Reason_Stemmed_Value',);
-		#sentiment_value_calc_for_senti($k,'Claim_Tagged', 'Claim_Value');
-		sentiment_value_calc_for_senti($k,'Warrant0_Tagged', 'Warrant0_Value');
-		sentiment_value_calc_for_senti($k,'Warrant0_Stemmed_Tagged', 'Warrant0_Stemmed_Value');
-		sentiment_value_calc_for_senti($k,'Warrant1_Tagged', 'Warrant1_Value');
-		sentiment_value_calc_for_senti($k,'Warrant1_Stemmed_Tagged', 'Warrant1_Stemmed_Value');
+	data_non_tagged_words($k, 'Reason_Tagged');
+	data_non_tagged_words($k, 'Claim_Tagged');
+	data_non_tagged_words($k, 'Warrant0_Tagged');
+	data_non_tagged_words($k, 'Warrant1_Tagged');
 
+	sentiment_value_calc_for_senti($k,'Reason_Tagged', 'Reason_Value');
+	sentiment_value_calc_for_senti($k,'Claim_Tagged', 'Claim_Value');
+	sentiment_value_calc_for_senti($k,'Warrant0_Tagged', 'Warrant0_Value');
+	sentiment_value_calc_for_senti($k,'Warrant1_Tagged', 'Warrant1_Value');
 	}
 }
+
+### Back off model that is used to tag words that do not have values, i.e trusted -> trust ###
+sub data_non_tagged_words{
+	my ($key1, $key2) = @_;
+
+	my @temp = split(' ', $DataHash{$key1}{$key2});
+
+	for (my $array_element = 0; $array_element < scalar @temp; $array_element++)
+	{
+		if($temp[$array_element] =~ m/#/)
+		{
+			my @hash_split = split('#', $temp[$array_element]);
+
+			if($hash_split[1] =~ m/\(/)
+			{}
+			else
+			{
+				
+				#print "================\n";
+				#print "Before:" . $hash_split[0] ."\n";
+				$hash_split[0] =~ s/([a-z]*)(ed)$/$1/g;
+				$hash_split[0] =~ s/([a-z]*)(ing)$/$1/g;
+				$hash_split[0] =~ s/([a-z]*)(s)$/$1/g;
+				#print "After:" . $hash_split[0] ."\n";
+				#print "================\n";
+			}
+
+			$temp[$array_element] = join ('#', @hash_split);
+			if(exists $SentiWordHash{$temp[$array_element]})
+			{
+				$temp[$array_element] .= "(".$SentiWordHash{$temp[$array_element]}.")";
+			}
+		}
+	}
+
+	$DataHash{$key1}{$key2} = join(' ', @temp);
+}
+
 
 #Tags Value of Words
 sub data_value_tagging{
@@ -179,6 +201,10 @@ sub data_value_tagging{
 		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
 		#print "$1 : $w \n";
 	}
+
+
+
+
 }
 
 #Calculates
@@ -240,7 +266,7 @@ sub count_while {
 ########################################################
 
 #Subroutines called#
-COMAPRISION_SHOWDOWN(); #5
+evaluate_assigned_answer(); #5
 accuracy(); #6
 
 print_hash(); #-- Can be used to print out DataHash
@@ -259,24 +285,19 @@ print_hash(); #-- Can be used to print out DataHash
 
 ######################## USED ###########################
 
-#COMAPRISION SHOW DOWN (CAPS BECAUSE THIS IS IMPORTANT)
-# Algorithm Step #5
-# 1) Calculate which warrant is closer to the claim_reason_sentiment
-# 2) Assigns the answer to Hash for comparision
-sub COMAPRISION_SHOWDOWN{
+sub evaluate_assigned_answer{
 	my $equal = 0;	
 
 	foreach my $k(keys %DataHash)
 	{
 		#Algorithm Step #5.1
-		#my $warrant_0 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant0_Value});
-		#my $warrant_1 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant1_Value});
+		my $warrant_0 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant0_Value});
+		my $warrant_1 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant1_Value});
 
-	#my $warrant_0 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant0_Value});
-	#my $warrant_1 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant1_Value});
-	my $warrant_0 = abs($DataHash{$k}{Reason_Stemmed_Value} - $DataHash{$k}{Warrant0_Stemmed_Value});
-	my $warrant_1 = abs($DataHash{$k}{Reason_Stemmed_Value} - $DataHash{$k}{Warrant1_Stemmed_Value});
 
+	
+		#my $warrant_0 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant0_Value});
+		#my $warrant_1 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant1_Value});
 
 		if($warrant_0 < $warrant_1)
 		{
@@ -288,10 +309,10 @@ sub COMAPRISION_SHOWDOWN{
 		}
 		else #Algorithm Step #5.2.3
 		{
-			$DataHash{$k}{Answer} = '-1';	
+			$DataHash{$k}{Answer} = '1';	
 			$equal++;
 		}
-	}
+    }
 	print "Instances in which warrants = 0.... : $equal \n";
 }
 
@@ -319,21 +340,12 @@ sub accuracy{
 			#print "Debate Info: $DataHash{$key}{Debate_Info} ";
 			#print "Claim : $DataHash{$key}{Claim_Tagged}\n ";
 			#print "Claim : $DataHash{$key}{Claim_Value}\n ";
-			print "Reason_stem: $DataHash{$key}{Reason_Stemmed_Tagged}\n";
-			print "Reason_stem: $DataHash{$key}{Reason_Stemmed_Value}\n ";
-			#print "Reason: $DataHash{$key}{Reason_Tagged}\n ";
-			#print "Reason: $DataHash{$key}{Reason_Value}\n ";
-			#print "Warrant 0: $DataHash{$key}{Warrant0_Tagged}\n ";
-			print "Warrant0_stemmed: $DataHash{$key}{Warrant0_Stemmed_Tagged}\n";
-			print "Warrant0_stem_value: $DataHash{$key}{Warrant0_Stemmed_Value}\n";					
-			
-			#print "Warrant0 Value: $DataHash{$key}{Warrant0_Value}\n";					
-			print "Warrant1_stemmed: $DataHash{$key}{Warrant1_Stemmed_Tagged}\n";
-			print "Warrant1 Value_stemmed: $DataHash{$key}{Warrant1_Stemmed_Value}\n";					
-			
-			#print "Warrant 1: $DataHash{$key}{Warrant1_Tagged}\n";
-
-			#print "Warrant1 Value: $DataHash{$key}{Warrant1_Value}\n";
+			print "Reason: $DataHash{$key}{Reason_Tagged}\n";
+			print "Reason: $DataHash{$key}{Reason_Value}\n";
+			print "Warrant 0: $DataHash{$key}{Warrant0_Tagged}\n ";
+			print "Warrant0 Value: $DataHash{$key}{Warrant0_Value}\n";									
+			print "Warrant 1: $DataHash{$key}{Warrant1_Tagged}\n";
+			print "Warrant1 Value: $DataHash{$key}{Warrant1_Value}\n";
 			print "CorrectLabel: $DataHash{$key}{CorrectLabel}\n";	
 			print "Answer: $DataHash{$key}{Answer}\n";
 			print "------------------------\n";
@@ -360,10 +372,6 @@ sub print_hash{
 	print "########################################\n";
 	#print Dumper \%DataHash;
 	#print Dumper \%SentiWordHash;
-	#print Dumper \%Word_Duplicate_Hash;
-	print "########################################\n";
-	#print Dumper \%WordSentimentHash;
-	print "########################################\n";
 }
 
 ## Sanatizes Text
@@ -372,7 +380,7 @@ sub text_sanitation{
 	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
 	#$my_text =~ s/[[:punct:]]//g;
 	$my_text =~ s/-/ /g;
-	$my_text =~ s/\bbe\b//g;
+	#$my_text =~ s/\bbe\b//g;
 	$my_text =~ s/\n+/\n/g;
 	$my_text =~ s/\s+/ /g;
 	$my_text = lc($my_text);
