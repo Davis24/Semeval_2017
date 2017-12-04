@@ -60,8 +60,8 @@ my $all_text;
 my %bigram;
 my $bigram_frequency = 0;
 
-################ 2 ####################################
-#Open Dev-Full Text and read in the data/ preform text manipulations 
+
+#Open the given file, in this case dev-full.txt or train-full.txt and preform part of speech tagging and tag mapping ###
 open(my $fh, '<', $filename) or die "Could not open";	
 while(my $row = <$fh>)
 {
@@ -93,21 +93,19 @@ while(my $row = <$fh>)
 	$DataHash{$temparray[0]}{Debate_Info} = $temparray[7];
 	$DataHash{$temparray[0]}{Answer} = -1;
 
-
 	### Call to convert Tagger tags to SentiNet tags ###
 	data_set_tag_mapping($temparray[0], 'Reason_Tagged');
 	data_set_tag_mapping($temparray[0], 'Claim_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant0_Tagged');
 	data_set_tag_mapping($temparray[0], 'Warrant1_Tagged');
-
 }
  
 
- ### Opening and loading in the data from SentiNet_1.0 ###
+ ### Opening and loading in the sentiment data from SentiNet_1.0 ###
 open($fh, '<', $filename2) or die "Could not open SentiWordNet File.";	
 while(my $row = <$fh>)
 {
-	if($row =~ m/(.*)\s-?+[0-9.]{2,}\n$/)
+	if($row =~ m/(.*)\s-?+[0-9.]{2,}\n$/) ### Only add words that a sentiment value greater or less than 0 ###
 	{
 		$row =~ s/\n//g;
 		my @temparray = split('\t',$row);
@@ -115,7 +113,7 @@ while(my $row = <$fh>)
 	}
 }
 
-sentiment_value_tagging();
+
 
 ### Used to map the tags from Perl module Tagger to SentiNet's tags ###
 sub data_set_tag_mapping
@@ -153,8 +151,9 @@ sub sentiment_value_tagging
 	}
 }
 
-### Back off model that is used to tag words that do not have values, i.e trusted -> trust ###
-sub data_non_tagged_words{
+### Back off model for -ed, -ing, -s that is used to tag words that do not have values, i.e trusted -> trust ###
+sub data_non_tagged_words
+{
 	my ($key1, $key2) = @_;
 
 	my @temp = split(' ', $DataHash{$key1}{$key2});
@@ -168,8 +167,7 @@ sub data_non_tagged_words{
 			if($hash_split[1] =~ m/\(/)
 			{}
 			else
-			{
-				
+			{				
 				#print "================\n";
 				#print "Before:" . $hash_split[0] ."\n";
 				$hash_split[0] =~ s/([a-z]*)(ed)$/$1/g;
@@ -186,29 +184,25 @@ sub data_non_tagged_words{
 			}
 		}
 	}
-
 	$DataHash{$key1}{$key2} = join(' ', @temp);
 }
 
-
-#Tags Value of Words
-sub data_value_tagging{
+### Assign the sentiment value from SentiNet_1.0 to the matching word ###
+sub data_value_tagging
+{
 	my ($key1, $key2, $sentikey) = @_;
 
 	if($DataHash{$key1}{$key2} =~ m/\b($sentikey)\b/)
 	{
 		my $v = $SentiWordHash{$sentikey};
 		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
-		#print "$1 : $w \n";
 	}
-
-
-
-
 }
 
-#Calculates
-sub sentiment_value_calc_for_senti{
+### Calculates the value of the string passed into it for Reason, Warrant0, and Warrant1. ###
+### The negation process works as follows, if a negation term is found in the sentence it will negate all the words follow the negation term. ###
+sub sentiment_value_calc_for_senti
+{
 	my ($key1, $key2, $value) = @_;
 
 	if($DataHash{$key1}{$key2} =~ /\b(n't#r|not#r|cannot#n|cannot#v|not#n|no\/DET)\b/)
@@ -221,11 +215,8 @@ sub sentiment_value_calc_for_senti{
 		{
 			if($split_text[$array_element] =~ /\b(n't#r|not#r|cannot#n|cannot#v|not#n|no\/DET)\b/)
 			{
-				#print "Contains NOT or CANNOT\n";
 				for (my $sub_loop = $array_element + 1; $sub_loop < scalar @split_text; $sub_loop++)
 				{
-					#print $split_text[$sub_loop];
-					#print " ";
 					if($split_text[$sub_loop] =~ /\(-/)
 					{
 						$split_text[$sub_loop] =~ s/\(-/\(/g;
@@ -233,8 +224,7 @@ sub sentiment_value_calc_for_senti{
 					elsif($split_text[$sub_loop] =~ /\(/)
 					{
 						$split_text[$sub_loop] =~ s/\(/\(-/g;
-					}
-					
+					}			
 				}
 			}
 		}
@@ -244,28 +234,28 @@ sub sentiment_value_calc_for_senti{
 	}
 
 	my @matches = ($DataHash{$key1}{$key2} =~ /-?[0-9]+\.?[0-9]+/g);
-
 	if((scalar @matches) > 0)
 	{
 		foreach my $num (@matches)
 		{	
 			$DataHash{$key1}{$value} += $num;
 		}
-
-		$DataHash{$key1}{$value} = $DataHash{$key1}{$value} / count_while($DataHash{$key1}{$key2});
+		$DataHash{$key1}{$value} = $DataHash{$key1}{$value} / count($DataHash{$key1}{$key2});
 	}
 }
 
-
-sub count_while {
+### Counts the amount of words in a sentence. This is used for normalization. ###
+sub count
+{
     my $text = $_[0]; 
     my $count = 0;
     $count++ while $text =~ /\S+/g; 
     return $count;
 }
-########################################################
+
 
 #Subroutines called#
+sentiment_value_tagging();
 evaluate_assigned_answer(); #5
 accuracy(); #6
 
@@ -363,7 +353,8 @@ sub accuracy{
 }
 
 #Prints out hash using Dumper
-sub print_hash{
+sub print_hash
+{
 	#my %tempHash = $_[0];
 	print "########################################\n";
 	#print Dumper \%unigram;
@@ -375,78 +366,24 @@ sub print_hash{
 }
 
 ## Sanatizes Text
-sub text_sanitation{
+sub text_sanitation
+{
 	my $my_text = $_[0];
 	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
 	#$my_text =~ s/[[:punct:]]//g;
 	$my_text =~ s/-/ /g;
-	#$my_text =~ s/\bbe\b//g;
 	$my_text =~ s/\n+/\n/g;
 	$my_text =~ s/\s+/ /g;
 	$my_text = lc($my_text);
 	return $my_text;
 }
 
-sub output_confidence_csv{
+sub output_confidence_csv
+{
 	my $csv_file = 'perl_confidence_interval.txt';
 	open(my $fh, '>', $csv_file) or die "Could not open file '$csv_file' $!";
 	# ID, TAG, CONFIDENCE
 	#print $fh "My first report generated by perl\n";
 	close $fh;
 	#print "done\n";
-}
-
-################################################
-#		NOT USED SUB ROUTINES
-###############################################
-
-# creates a bi-gram of $all_text
-sub create_bigram{
-	my @words = split(/\s/, $all_text);
-	for(my $i = 0; $i < $#words; $i++)
-	{
-		my $temp_text = $words[$i] . " " . $words[$i + 1];	
-		if(!exists($bigram{$temp_text}))
-		{
-			$bigram{$temp_text} = 1;
-		}
-		else
-		{
-			$bigram{$temp_text}++;
-		}
-		$bigram_frequency++;		
-	}
-}
-
-#Creates a Unigram out of $all_text
-sub create_unigram{
-	my @words = split(/\s/, $all_text);
-	for(my $i = 0; $i <= $#words; $i++)
-	{
-		if(!exists($unigram{$words[$i]}))
-		{
-			$unigram{$words[$i]} = 1;
-		}
-		else
-		{
-			$unigram{$words[$i]}++;
-		}
-		$unigram_frequency++;
-	}
-}
-
-#Uses rand to 'guess' the answers
-sub random_sample{
-	foreach my $key (keys %DataHash)
-	{
-		my $tempRandom = rand();
-		if($tempRandom > .5)
-		{
-			$DataHash{$key}{Answer} = '1';
-		}
-		else
-		{
-			$DataHash{$key}{Answer} = '0';
-		}		
-	}
 }
