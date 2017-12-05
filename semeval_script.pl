@@ -7,7 +7,6 @@
 #
 #   Utilizing Code from: 
 #  	   Lingua::EN::Tagger
-#	   Text::English
 #   Text Used:   
 #     SentiWords_1.0 - Guerini M., Gatti L. & Turchi M. “Sentiment Analysis: How to Derive Prior Polarities from SentiWordNet”. In Proceedings of the 2013 Conference on Empirical Methods in Natural Language Processing (EMNLP'13), pp 1259-1269. Seattle, Washington, USA. 2013.
 #
@@ -23,7 +22,7 @@
 #	
 #	How to Run:
 #   1) Have semeval_script.pl, SentiWords_1.0 (can be found here https://hlt-nlp.fbk.eu/technologies/sentiwords), and dev-full.txt
-#	2) Run perl semeval_script.pl dev-full.txt SCL-NMA/SCL-NMA.txt
+#	2) Run perl semeval_script.pl dev-full.txt <Added File Name>
 #
 #
 #######################################################################
@@ -34,9 +33,7 @@
 #
 ###############################################################################
 
-
-
-# USE 
+### USE ###
 use warnings;
 use strict;
 use Data::Dumper qw(Dumper);
@@ -44,24 +41,15 @@ use Lingua::EN::Tagger;
 
 $Data::Dumper::Sortkeys = 1;
 
-# Files: Currently utilizes two files dev-full.txt, SCL-NMA.txt
+### Files: Currently utilizes two files dev-full.txt or train-full.txt, and SentiNet_1.0 ###
 my $filename = $ARGV[0];
 my $filename2 = $ARGV[1];
 
-# Variables
-my $p = new Lingua::EN::Tagger; ## For a list of the tags it used (Penn Treebank) reference http://cpansearch.perl.org/src/ACOBURN/Lingua-EN-Tagger-0.28/README
-my %DataHash; #Hash containing all the data
-my %SentiWordHash;
+my $p = new Lingua::EN::Tagger; ### For a list of the tags it used (Penn Treebank) reference http://cpansearch.perl.org/src/ACOBURN/Lingua-EN-Tagger-0.28/README ###
+my %DataHash; ### Hash containing all the data from the dev-full.txt or train-full.txt ###
+my %SentiWordHash; ### Hash containing all the data from SenitNet_1.0 ###
 
-# Variables Not Being Used -- but still declaring to avoid run errors.
-my %unigram;
-my $unigram_frequency = 0;
-my $all_text;
-my %bigram;
-my $bigram_frequency = 0;
-
-
-#Open the given file, in this case dev-full.txt or train-full.txt and preform part of speech tagging and tag mapping ###
+### Open the given file, in this case dev-full.txt or train-full.txt and preform part of speech tagging and tag mapping ###
 open(my $fh, '<', $filename) or die "Could not open";	
 while(my $row = <$fh>)
 {
@@ -100,8 +88,7 @@ while(my $row = <$fh>)
 	data_set_tag_mapping($temparray[0], 'Warrant1_Tagged');
 }
  
-
- ### Opening and loading in the sentiment data from SentiNet_1.0 ###
+### Opening and loading in the sentiment data from SentiNet_1.0 ###
 open($fh, '<', $filename2) or die "Could not open SentiWordNet File.";	
 while(my $row = <$fh>)
 {
@@ -113,7 +100,18 @@ while(my $row = <$fh>)
 	}
 }
 
+### Subroutines Called, check individual subroutines to see additional calls ###
+sentiment_value_tagging();
+evalute_answer(); 
+accuracy(); 
+output_confidence_csv();
+#print_hash(); #-- Can be used to print out the hases
 
+############# Sub Routines ######################
+#
+# THESE ARE ORDERED IN ORDER OF CALLS IN THE PROGRAM
+#
+#################################################
 
 ### Used to map the tags from Perl module Tagger to SentiNet's tags ###
 sub data_set_tag_mapping
@@ -151,11 +149,22 @@ sub sentiment_value_tagging
 	}
 }
 
+### Assign the sentiment value from SentiNet_1.0 to the matching word ###
+sub data_value_tagging
+{
+	my ($key1, $key2, $sentikey) = @_;
+
+	if($DataHash{$key1}{$key2} =~ m/\b($sentikey)\b/)
+	{
+		my $v = $SentiWordHash{$sentikey};
+		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
+	}
+}
+
 ### Back off model for -ed, -ing, -s that is used to tag words that do not have values, i.e trusted -> trust ###
 sub data_non_tagged_words
 {
 	my ($key1, $key2) = @_;
-
 	my @temp = split(' ', $DataHash{$key1}{$key2});
 
 	for (my $array_element = 0; $array_element < scalar @temp; $array_element++)
@@ -164,6 +173,7 @@ sub data_non_tagged_words
 		{
 			my @hash_split = split('#', $temp[$array_element]);
 
+			### If the word has a value (which we know based on the fact of if the word contains a (, which would be there from a the value (.25)) ###
 			if($hash_split[1] =~ m/\(/)
 			{}
 			else
@@ -187,24 +197,13 @@ sub data_non_tagged_words
 	$DataHash{$key1}{$key2} = join(' ', @temp);
 }
 
-### Assign the sentiment value from SentiNet_1.0 to the matching word ###
-sub data_value_tagging
-{
-	my ($key1, $key2, $sentikey) = @_;
-
-	if($DataHash{$key1}{$key2} =~ m/\b($sentikey)\b/)
-	{
-		my $v = $SentiWordHash{$sentikey};
-		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
-	}
-}
-
 ### Calculates the value of the string passed into it for Reason, Warrant0, and Warrant1. ###
 ### The negation process works as follows, if a negation term is found in the sentence it will negate all the words follow the negation term. ###
 sub sentiment_value_calc_for_senti
 {
 	my ($key1, $key2, $value) = @_;
 
+	### Negation ###
 	if($DataHash{$key1}{$key2} =~ /\b(n't#r|not#r|cannot#n|cannot#v|not#n|no\/DET)\b/)
 	{
 		#print "------\n";
@@ -233,6 +232,7 @@ sub sentiment_value_calc_for_senti
 		$DataHash{$key1}{$key2} = join(" ", @split_text);
 	}
 
+	### Calculation ###
 	my @matches = ($DataHash{$key1}{$key2} =~ /-?[0-9]+\.?[0-9]+/g);
 	if((scalar @matches) > 0)
 	{
@@ -253,66 +253,41 @@ sub count
     return $count;
 }
 
-
-#Subroutines called#
-sentiment_value_tagging();
-evaluate_assigned_answer(); #5
-accuracy(); #6
-
-print_hash(); #-- Can be used to print out DataHash
-
-
-############# Sub Routines ######################
-#
-#		There are two sub routine sections -- USED and NOT USED.
-#		THESE ARE ORDER IN ALPHABETICAL ORDER.  
-#		
-#		USED -- Are currently active within the current runnable program
-#		NOT USE -- Subroutines created that are not used in the current runnable program (But not worth deleting in case brought back to be used)
-#
-#
-#################################################
-
-######################## USED ###########################
-
-sub evaluate_assigned_answer{
-	my $equal = 0;	
-
+sub evalute_answer
+{
+	#my $equal = 0;	
 	foreach my $k(keys %DataHash)
 	{
-		#Algorithm Step #5.1
-		my $warrant_0 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant0_Value});
-		my $warrant_1 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant1_Value});
+		#my $warrant_0 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant0_Value});
+		#my $warrant_1 = abs(($DataHash{$k}{Reason_Value} + $DataHash{$k}{Claim_Value}) - $DataHash{$k}{Warrant1_Value});
 
-
-	
-		#my $warrant_0 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant0_Value});
-		#my $warrant_1 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant1_Value});
+		### Only using the reason because it was shown to preform better ###
+		my $warrant_0 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant0_Value});
+		my $warrant_1 = abs($DataHash{$k}{Reason_Value} - $DataHash{$k}{Warrant1_Value});
 
 		if($warrant_0 < $warrant_1)
 		{
 			$DataHash{$k}{Answer} = '0';
+			$DataHash{$k}{Confidence} = 1 - $warrant_0;
 		}	
-		elsif ($warrant_1 < $warrant_0) #Algorithm Step #5.2.2
+		elsif ($warrant_1 < $warrant_0)
 		{
 			$DataHash{$k}{Answer} = '1';
+			$DataHash{$k}{Confidence} = 1 - $warrant_1;
 		}
-		else #Algorithm Step #5.2.3
+		else
 		{
 			$DataHash{$k}{Answer} = '1';	
-			$equal++;
+			#$equal++;
+			$DataHash{$k}{Confidence} = 0;
+
 		}
     }
-	print "Instances in which warrants = 0.... : $equal \n";
+	#print "Instances in which warrants = 0.... : $equal \n";
 }
 
-#Checks how many claims were accurately tagged (currently using randomness baseline) 
-#Algorithm Step #6
-#-------------- Total Labels --------------
-#Correct: 157 
-#Total Labels: 317 
-#Overall Accuracy: 49.5268138801262 
-#The above data was generated using random_sample
+
+### Checks assinged value versus the correct lable. Prints out accuracy and final information. ###
 sub accuracy{
 	my $totalLabels = 0;
 	my $correctTotalLabels = 0;
@@ -322,14 +297,16 @@ sub accuracy{
 		{
 			$correctTotalLabels++;
 		}
+=begin
 		else
 		{
+
 			print "------------------------\n";
-			#print "ID: $DataHash{$key}{ID} \n ";
-			#print "Debate Title: $DataHash{$key}{Debate_Title}\n";
-			#print "Debate Info: $DataHash{$key}{Debate_Info} ";
-			#print "Claim : $DataHash{$key}{Claim_Tagged}\n ";
-			#print "Claim : $DataHash{$key}{Claim_Value}\n ";
+			print "ID: $DataHash{$key}{ID} \n ";
+			print "Debate Title: $DataHash{$key}{Debate_Title}\n";
+			print "Debate Info: $DataHash{$key}{Debate_Info} ";
+			print "Claim : $DataHash{$key}{Claim_Tagged}\n ";
+			print "Claim : $DataHash{$key}{Claim_Value}\n ";
 			print "Reason: $DataHash{$key}{Reason_Tagged}\n";
 			print "Reason: $DataHash{$key}{Reason_Value}\n";
 			print "Warrant 0: $DataHash{$key}{Warrant0_Tagged}\n ";
@@ -340,9 +317,10 @@ sub accuracy{
 			print "Answer: $DataHash{$key}{Answer}\n";
 			print "------------------------\n";
 		}
+=end
+=cut
 		$totalLabels++;
 	}
-
 
 	my $accuracy = ($correctTotalLabels / $totalLabels) * 100;
 
@@ -352,20 +330,8 @@ sub accuracy{
 	print "Overall Accuracy: $accuracy";
 }
 
-#Prints out hash using Dumper
-sub print_hash
-{
-	#my %tempHash = $_[0];
-	print "########################################\n";
-	#print Dumper \%unigram;
-	print "########################################\n";
-	#print Dumper \%bigram;
-	print "########################################\n";
-	#print Dumper \%DataHash;
-	#print Dumper \%SentiWordHash;
-}
 
-## Sanatizes Text
+### Sanatizes the text passed in passed in. ###
 sub text_sanitation
 {
 	my $my_text = $_[0];
@@ -378,12 +344,24 @@ sub text_sanitation
 	return $my_text;
 }
 
+### Opens a file to print out the ID, TAG, CONFIDENCE; this is to be used in a voting system of other methods attempted ###
 sub output_confidence_csv
 {
+	# ID, TAG, CONFIDENCE
 	my $csv_file = 'perl_confidence_interval.txt';
 	open(my $fh, '>', $csv_file) or die "Could not open file '$csv_file' $!";
-	# ID, TAG, CONFIDENCE
-	#print $fh "My first report generated by perl\n";
+	foreach my $key (keys %DataHash)
+	{
+		my $string = $key .",".$DataHash{$key}{Answer}.",".$DataHash{$key}{Confidence}."\n";
+		print $fh "$string";
+	}
 	close $fh;
-	#print "done\n";
+}
+
+### Prints out hash using dumper ###
+sub print_hash
+{
+	print "########################################\n";
+	#print Dumper \%DataHash;
+	#print Dumper \%SentiWordHash;
 }
