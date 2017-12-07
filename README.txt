@@ -47,13 +47,11 @@ Algorithm:
     
 
 COMMAND TO RUN PROGRAM OR INPUT:
-perl semeval_script.pl .\Semeval_Data\train-full.txt .\SentiWords_1.0\S
-entiWords_1.0.txt
+perl semeval_script.pl .\Semeval_Data\train-full.txt .\SentiWords_1.0\SentiWords_1.0.txt
 
 or
 
-perl semeval_script.pl .\Semeval_Data\dev-full.txt .\SentiWords_1.0\S
-entiWords_1.0.txt
+perl semeval_script.pl .\Semeval_Data\dev-full.txt .\SentiWords_1.0\SentiWords_1.0.txt
     
 -------------- Total Labels --------------
 Correct: 613
