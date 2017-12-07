@@ -14,19 +14,18 @@
 #
 #	ROLES
 #	Megan Davis - Author of semeval_script.pl, and rules based implementation within powerpoint. Set up trello board.
-#   Andrew Ward - Author of task information/introduction and proposed approach. In addition to providing suggestions on solutions implemented. (Also implemented code not included in code drop #1)
-#	Kellan Childers -- Author of word2vec implementation, word2vec powerpoint details. Setup github project.
+# 
 #
 #  ALL CODE IN THIS PROGRAM IS AUTHORED BY MEGAN DAVIS UNLESS OTHERWISE SPECIFIED
 #####################################################################
 #	
 #	How to Run:
 #   1) Have semeval_script.pl, SentiWords_1.0 (can be found here https://hlt-nlp.fbk.eu/technologies/sentiwords), and dev-full.txt
-#	2) Run perl semeval_script.pl dev-full.txt <Added File Name>
-#
+#	2) Run 
+#			perl semeval_script.pm <dev or train txt> <lexicon (sentiwords)>
+#			perl semeval_script.pl .\Semeval_Data\dev-full.txt .\SentiWords_1.0\SentiWords_1.0.txt
 #
 #######################################################################
-#
 #
 #	ALGORTHIM:
 #	The algorithm follows the directions of those in the README file. Additional comments have been provided in the code. But ultimately reference the README points.
@@ -102,7 +101,7 @@ while(my $row = <$fh>)
 
 ### Subroutines Called, check individual subroutines to see additional calls ###
 sentiment_value_tagging();
-evalute_answer(); 
+evaluate_answer(); 
 accuracy(); 
 output_confidence_csv();
 #print_hash(); #-- Can be used to print out the hases
@@ -112,6 +111,19 @@ output_confidence_csv();
 # THESE ARE ORDERED IN ORDER OF CALLS IN THE PROGRAM
 #
 #################################################
+
+### Sanatizes the text passed in passed in. ###
+sub text_sanitation
+{
+	my $my_text = $_[0];
+	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
+	#$my_text =~ s/[[:punct:]]//g;
+	$my_text =~ s/-/ /g;
+	$my_text =~ s/\n+/\n/g;
+	$my_text =~ s/\s+/ /g;
+	$my_text = lc($my_text);
+	return $my_text;
+}
 
 ### Used to map the tags from Perl module Tagger to SentiNet's tags ###
 sub data_set_tag_mapping
@@ -142,10 +154,10 @@ sub sentiment_value_tagging
 	data_non_tagged_words($k, 'Warrant0_Tagged');
 	data_non_tagged_words($k, 'Warrant1_Tagged');
 
-	sentiment_value_calc_for_senti($k,'Reason_Tagged', 'Reason_Value');
-	sentiment_value_calc_for_senti($k,'Claim_Tagged', 'Claim_Value');
-	sentiment_value_calc_for_senti($k,'Warrant0_Tagged', 'Warrant0_Value');
-	sentiment_value_calc_for_senti($k,'Warrant1_Tagged', 'Warrant1_Value');
+	sentiment_value_calc($k,'Reason_Tagged', 'Reason_Value');
+	sentiment_value_calc($k,'Claim_Tagged', 'Claim_Value');
+	sentiment_value_calc($k,'Warrant0_Tagged', 'Warrant0_Value');
+	sentiment_value_calc($k,'Warrant1_Tagged', 'Warrant1_Value');
 	}
 }
 
@@ -157,7 +169,7 @@ sub data_value_tagging
 	if($DataHash{$key1}{$key2} =~ m/\b($sentikey)\b/)
 	{
 		my $v = $SentiWordHash{$sentikey};
-		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g;
+		$DataHash{$key1}{$key2} =~ s/\b($sentikey)\b/$1\($v\)/g; ### Note for improvement, may be faster to do if exists(?)
 	}
 }
 
@@ -199,7 +211,7 @@ sub data_non_tagged_words
 
 ### Calculates the value of the string passed into it for Reason, Warrant0, and Warrant1. ###
 ### The negation process works as follows, if a negation term is found in the sentence it will negate all the words follow the negation term. ###
-sub sentiment_value_calc_for_senti
+sub sentiment_value_calc
 {
 	my ($key1, $key2, $value) = @_;
 
@@ -240,7 +252,7 @@ sub sentiment_value_calc_for_senti
 		{	
 			$DataHash{$key1}{$value} += $num;
 		}
-		$DataHash{$key1}{$value} = $DataHash{$key1}{$value} / count($DataHash{$key1}{$key2});
+		$DataHash{$key1}{$value} = $DataHash{$key1}{$value} / count($DataHash{$key1}{$key2}); ###Normalizing###
 	}
 }
 
@@ -253,7 +265,7 @@ sub count
     return $count;
 }
 
-sub evalute_answer
+sub evaluate_answer
 {
 	#my $equal = 0;	
 	foreach my $k(keys %DataHash)
@@ -331,24 +343,13 @@ sub accuracy{
 }
 
 
-### Sanatizes the text passed in passed in. ###
-sub text_sanitation
-{
-	my $my_text = $_[0];
-	$my_text =~ s/[0-9]{1,}[A-Za-z]+//g;
-	#$my_text =~ s/[[:punct:]]//g;
-	$my_text =~ s/-/ /g;
-	$my_text =~ s/\n+/\n/g;
-	$my_text =~ s/\s+/ /g;
-	$my_text = lc($my_text);
-	return $my_text;
-}
+
 
 ### Opens a file to print out the ID, TAG, CONFIDENCE; this is to be used in a voting system of other methods attempted ###
 sub output_confidence_csv
 {
 	# ID, TAG, CONFIDENCE
-	my $csv_file = 'perl_confidence_interval.txt';
+	my $csv_file = 'perl_confidence.txt';
 	open(my $fh, '>', $csv_file) or die "Could not open file '$csv_file' $!";
 	foreach my $key (keys %DataHash)
 	{

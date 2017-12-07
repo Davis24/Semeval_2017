@@ -13,11 +13,3 @@ Ubuntu using Perl 5 Version 24
 2) Install Lingua::EN::Tagger using CPAN
 	2.1) Open Command Line and type CPAN	
 	2.2) Type install Lingua::EN::Tagger
-
-	
-NOTES:
-Lingua::EN::Tagger is currently part of the development process and not being used in the first code drop solution. However stripping this code out wouldn't fully represent the avenues attempted.
-
-INSTALL INSTRUCTIONS FOR WORD2VEC IMPLEMENTATION
-AUTHOR: Kellan ChildersLu
-<instructions>
